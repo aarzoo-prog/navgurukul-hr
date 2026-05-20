@@ -24,7 +24,12 @@ const DOC_TYPES = [
   { id: "experience", label: "Experience letter" },
 ];
 
-// ─── Helpers ───────────────────────────────────────────────────────────────────
+const API_HEADERS = {
+  "Content-Type": "application/json",
+  "x-api-key": import.meta.env.VITE_ANTHROPIC_API_KEY,
+  "anthropic-version": "2023-06-01",
+  "anthropic-dangerous-direct-browser-access": "true",
+};
 
 function calcSalary(ctcInput, pfM, mode) {
   const pf = parseFloat(pfM) || 1800;
@@ -39,8 +44,6 @@ function calcSalary(ctcInput, pfM, mode) {
 
 const fi = n => n.toLocaleString("en-IN");
 
-// ─── PDF print styles ───────────────────────────────────────────────────────────
-
 const PRINT_CSS = `
   @media print {
     body * { visibility: hidden !important; }
@@ -48,8 +51,6 @@ const PRINT_CSS = `
     #pdf-preview { position: fixed; inset: 0; background: white; z-index: 9999; overflow: auto; }
   }
 `;
-
-// ─── Document renderers (return structured data for both preview and PDF) ──────
 
 function buildOfferDoc(f, sal) {
   const respLines = (f.resp || "").split("\n").filter(Boolean);
@@ -137,7 +138,7 @@ function buildAppraisalDoc(f, sal) {
     org: NG_FULL,
     sections: [
       { type: "salutation", text: `Dear ${f.name},` },
-      { type: "para", text: `NavGurukul has and continues to move ahead because of the hard work and dedication of the team members. Congratulations on a successful journey so far, and we're grateful for your contributions.` },
+      { type: "para", text: "NavGurukul has and continues to move ahead because of the hard work and dedication of the team members. Congratulations on a successful journey so far, and we're grateful for your contributions." },
       { type: "para", text: `In recognition of your performance, we are delighted to inform you that your revised compensation will be ${f.newctc} INR per month, inclusive of all taxes (inclusive of employee and employer PF contribution). TDS is to be deducted, if applicable, as per law. No other deductions unless insurance, etc., processes are set up.) w.e.f. ${f.effdate}` },
       { type: "para", text: "All the other terms from the previous agreement remain unchanged." },
       { type: "para", text: "All the very best." },
@@ -165,11 +166,8 @@ function buildExperienceDoc(f) {
   };
 }
 
-// ─── Document Preview Renderer ─────────────────────────────────────────────────
-
 function DocPreview({ doc }) {
   if (!doc) return null;
-
   const renderSection = (s, i) => {
     switch (s.type) {
       case "salutation":
@@ -264,7 +262,6 @@ function DocPreview({ doc }) {
       default: return null;
     }
   };
-
   return (
     <div style={{ fontFamily: "Georgia, serif", fontSize: 14, color: "#111", lineHeight: 1.6, padding: "0 4px" }}>
       {doc.org && <p style={{ textAlign: "center", fontWeight: 700, marginBottom: 4, fontSize: 14 }}>{doc.org}</p>}
@@ -277,8 +274,6 @@ function DocPreview({ doc }) {
     </div>
   );
 }
-
-// ─── Form components ───────────────────────────────────────────────────────────
 
 const inputStyle = {
   width: "100%", padding: "8px 11px", border: "1px solid #ddd",
@@ -350,6 +345,7 @@ function JDUploader({ onRnRGenerated, role, loading, setLoading }) {
     reader.onload = e => setJdText(e.target.result);
     reader.readAsText(file);
   };
+
   const handleDrop = useCallback((e) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
@@ -364,13 +360,16 @@ function JDUploader({ onRnRGenerated, role, loading, setLoading }) {
       : `Generate a realistic numbered list of 6-8 key responsibilities for a "${role}" at NavGurukul Foundation for Social Welfare — an NGO running residential tech education for underserved youth in India. Write in NavGurukul's warm, values-driven tone. Return ONLY the numbered list, one item per line, no headers or commentary.`;
     try {
       const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST",
+        headers: API_HEADERS,
         body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 600, messages: [{ role: "user", content: prompt }] }),
       });
       const data = await res.json();
       const text = data.content?.find(b => b.type === "text")?.text || "";
       onRnRGenerated(text.trim());
-    } catch { onRnRGenerated("Could not generate. Please try again."); }
+    } catch {
+      onRnRGenerated("Could not generate. Please try again.");
+    }
     setLoading(false);
   };
 
@@ -397,8 +396,8 @@ function JDUploader({ onRnRGenerated, role, loading, setLoading }) {
             <p style={{ fontSize: 13, color: "#666" }}>AI will write responsibilities based on the role title you entered above.</p>
             <button onClick={generate} disabled={loading || !role} style={{
               alignSelf: "flex-start", padding: "8px 16px", background: "#E05A2B", color: "#fff",
-              border: "none", borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: loading || !role ? "not-allowed" : "pointer",
-              opacity: !role ? 0.5 : 1,
+              border: "none", borderRadius: 7, fontSize: 13, fontWeight: 600,
+              cursor: loading || !role ? "not-allowed" : "pointer", opacity: !role ? 0.5 : 1,
             }}>{loading ? "Generating…" : `Generate R&R for "${role || "role"}"`}</button>
             {!role && <span style={{ fontSize: 11, color: "#aaa" }}>Enter the role title in the form above first.</span>}
           </div>
@@ -410,7 +409,7 @@ function JDUploader({ onRnRGenerated, role, loading, setLoading }) {
               onClick={() => document.getElementById("jd-file-in").click()}>
               <input id="jd-file-in" type="file" accept=".txt" style={{ display: "none" }} onChange={e => { if (e.target.files[0]) readFile(e.target.files[0]); }} />
               <p style={{ fontSize: 13, color: "#777" }}>Drop .txt file here or click to browse</p>
-              {jdText && <p style={{ fontSize: 12, color: "#1a7a4a", marginTop: 6 }}>✓ File loaded ({jdText.length} chars)</p>}
+              {jdText && <p style={{ fontSize: 12, color: "#1a7a4a", marginTop: 6 }}>File loaded ({jdText.length} chars)</p>}
             </div>
             <button onClick={generate} disabled={loading || !jdText.trim()} style={{
               alignSelf: "flex-start", padding: "8px 16px", background: "#E05A2B", color: "#fff",
@@ -433,8 +432,6 @@ function JDUploader({ onRnRGenerated, role, loading, setLoading }) {
     </div>
   );
 }
-
-// ─── Main App ──────────────────────────────────────────────────────────────────
 
 const EMPTY = {
   name: "", role: "", reporting: "", doj: "", location: "", probation: "3 months",
@@ -461,16 +458,6 @@ export default function App() {
     return calcSalary(ctcInput, f("pf"), mode);
   };
 
-  const buildPrompt = () => {
-    const respLines = (f("resp") || "").split("\n").filter(Boolean);
-    const bulleted = respLines.map(r => `● ${r}`).join("\n");
-    const numbered = respLines.map((r, i) => `${i + 1}. ${r}`).join("\n");
-    if (docType === "offer" || docType === "employment") {
-      return `Clean up and lightly polish the following responsibilities for a ${f("role")} at ${NG_FULL}. Keep the meaning, fix grammar/formatting only. Return ONLY a numbered list, one item per line.\n\n${f("resp")}`;
-    }
-    return null;
-  };
-
   const generateDoc = () => {
     const sal = getSal("annual");
     const salM = getSal("monthly");
@@ -494,8 +481,6 @@ export default function App() {
       li { margin-bottom: 5px; }
       table { width: 100%; border-collapse: collapse; margin-top: 8px; }
       td, th { padding: 6px 8px; }
-      .sig-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 36px; }
-      .sig-line { height: 44px; border-bottom: 1px solid #bbb; margin-bottom: 8px; }
       .footer { margin-top: 36px; padding-top: 10px; border-top: 1px solid #ddd; display: flex; justify-content: space-between; font-size: 9pt; color: #aaa; }
       @media print { body { padding: 0; } @page { margin: 2cm 2.5cm; } }
     </style></head><body>${content}</body></html>`);
@@ -647,8 +632,6 @@ export default function App() {
   return (
     <div style={{ minHeight: "100vh", background: "#f5f3ef", fontFamily: "'DM Sans', system-ui, sans-serif" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap'); @keyframes spin { to { transform: rotate(360deg); } } ${PRINT_CSS}`}</style>
-
-      {/* Header */}
       <div style={{ background: "#fff", borderBottom: "1px solid #e8e4de", padding: "14px 28px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 1 }}>
           <span style={{ fontFamily: "Georgia, serif", fontSize: 22, color: "#E05A2B", fontWeight: 700 }}>nav</span>
@@ -656,9 +639,7 @@ export default function App() {
         </div>
         <span style={{ fontSize: 12, color: "#aaa" }}>HR document generator</span>
       </div>
-
       <div style={{ maxWidth: 820, margin: "0 auto", padding: "24px 20px 60px" }}>
-        {/* Doc type tabs */}
         <div style={{ display: "flex", gap: 6, marginBottom: 24, flexWrap: "wrap" }}>
           {DOC_TYPES.map(d => (
             <button key={d.id} onClick={() => { setDocType(d.id); setDoc(null); setFields(EMPTY); }}
@@ -671,9 +652,7 @@ export default function App() {
               }}>{d.label}</button>
           ))}
         </div>
-
         <div style={{ display: "grid", gridTemplateColumns: doc ? "1fr 1fr" : "1fr", gap: 20 }}>
-          {/* Form panel */}
           <div style={{ background: "#fff", border: "1px solid #e8e4de", borderRadius: 12, padding: "22px 22px 26px" }}>
             {renderForm()}
             <button onClick={generateDoc} disabled={generating} style={{
@@ -688,8 +667,6 @@ export default function App() {
                 : "✦  Generate document"}
             </button>
           </div>
-
-          {/* Preview panel */}
           {doc && (
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
@@ -709,8 +686,6 @@ export default function App() {
           )}
         </div>
       </div>
-
-      {/* Hidden PDF target */}
       <div id="pdf-preview" style={{ display: "none" }}>
         <div ref={pdfRef}><DocPreview doc={doc} /></div>
       </div>
