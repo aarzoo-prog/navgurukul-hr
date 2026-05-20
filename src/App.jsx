@@ -438,7 +438,7 @@ const EMPTY = {
   noticep: "30 days", ctc: "", pf: "1800", resp: "",
   startdate: "", compensation: "", campus: "",
   newctc: "", effdate: "", fromdate: "", todate: "", dept: "", gender: "she/her",
-  signname: "Nidhi Anarkat", signtitle: "Co-Founder & CEO", signdate: "",
+  signname: "Abhishek Gupta", signtitle: "Co-Founder & CEO", signdate: "",
 };
 
 export default function App() {
@@ -497,7 +497,7 @@ export default function App() {
       <>
         {sLabel("Signatory")}
         <div style={g2}>
-          <Field label="Signatory name" value={f("signname")} onChange={v => set("signname", v)} placeholder="Nidhi Anarkat" />
+          <Field label="Signatory name" value={f("signname")} onChange={v => set("signname", v)} placeholder="Abhishek Gupta" />
           <Field label="Signatory title" value={f("signtitle")} onChange={v => set("signtitle", v)} placeholder="Co-Founder & CEO" />
         </div>
         <div style={{ ...g1, marginTop: 14 }}>
@@ -639,7 +639,7 @@ export default function App() {
         </div>
         <span style={{ fontSize: 12, color: "#aaa" }}>HR document generator</span>
       </div>
-      <div style={{ maxWidth: 820, margin: "0 auto", padding: "24px 20px 60px" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "24px 32px 60px" }}>
         <div style={{ display: "flex", gap: 6, marginBottom: 24, flexWrap: "wrap" }}>
           {DOC_TYPES.map(d => (
             <button key={d.id} onClick={() => { setDocType(d.id); setDoc(null); setFields(EMPTY); }}
